@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽獎活動</title>
+</head>
+<style>
+    body{
+        background-color: gray;
+    }
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      color:white;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    h1{
+      color: white;
+      text-align: center;
+    }
+    .header, .prize-section, .participants-section, .result-section {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #007bff;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    } 
+    .result-section h2 {
+      margin-bottom: 10px;
+    }
+    #results {
+      color: black;
+      background-color: #e9ecef;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    textarea{
+      width: 98%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .custom-file-upload {
+    display: inline-block;    
+    padding: 5px 12px;
+    border: none;
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .custom-file-upload:hover {
+    background-color: #0056b3;
+  }
+</style>
+<body>
+    <h1>抽獎</h1>
+    <div class="container">
+        <div class="participants-section">
+            <label for="participantList">待抽名單：</label>
+            <label for="fileInput" class="custom-file-upload">
+              <i class="fa fa-cloud-upload"></i> 選擇CSV檔
+            </label>
+            <input type="file" id="fileInput" onchange="handleFileSelect(event)" style="display: none;">
+            <textarea id="participantList" name="participantList" rows="10" placeholder="ID, 月數"></textarea>
+            <p id="count">總人數：0</p>
+        </div>
+        <div class="prize-section">
+            <label for="prizeDetails">獎項內容：</label>
+            <textarea id="prizeDetails" name="prizeDetails" rows="5" placeholder="項目, 數量"></textarea>
+        </div>
+        <div class="result-section">
+            <h2>中獎結果：</h2>
+            <p id="results"></p>
+        </div>
+        <div>
+            <button id="start">抽獎</button>
+            <button id="reset">重置</button>
+        </div>
+    </div>
+    <script>
+      const drawButton = document.getElementById('start');
+      const clearButton = document.getElementById('reset');
+      const resultDisplay = document.getElementById('results');
+
+      let drawResults = []; 
+      let currentPrizeIndex = 0; 
+      let participantsGlobal = [];
+
+      document.addEventListener('DOMContentLoaded', (event) => {
+        const textarea = document.getElementById('participantList');
+        updateLineCount(textarea);
+      });
+      document.getElementById('participantList').addEventListener('input', (event) => {
+        const textarea = event.target;
+        updateLineCount(textarea);
+      });
+
+      function updateLineCount(textarea){
+        if (textarea.value.trim() === ''){
+          document.getElementById('count').textContent = '總人數 : 0';
+        }else{
+            const lineCount = textarea.value.split('\n').length;
+            document.getElementById('count').textContent = '總人數： ' + lineCount;
+          }
+      }
+      
+      function calculateDataCount(csvContent){
+        var lines = csvContent.split('\n');
+        var dataCount = lines.length;
+        document.getElementById('count').textContent = '總人數： ' + dataCount;
+      }
+
+      function handleFileSelect(event){
+        var file = event.target.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e){
+            var csvContent = e.target.result;
+            document.getElementById('participantList').value = csvContent;
+            calculateDataCount(csvContent);
+        };
+        reader.readAsText(file);
+      }
+      
+      function lockButtons(){
+        drawButton.disabled = true;
+        clearButton.disabled = false;
+      }
+
+      function unlockButtons(){
+        drawButton.disabled = false;
+        clearButton.disabled = false;
+      }
+
+      function drawPrize(){
+        lockButtons();
+        let participantsText = document.getElementById('participantList').value.trim();
+        let prizesText = document.getElementById('prizeDetails').value.trim();
+          
+        if (participantsGlobal.length === 0) {
+          participantsGlobal = participantsText.split('\n').map(participant =>{
+          let [name, rate] = participant.split(',').map(item => item.trim());
+          return { name, rate: parseFloat(rate) };}).filter(participant => participant.name !== '' && !isNaN(participant.rate) && participant.rate > 0);
+        }
+      
+        let prizes = prizesText.split('\n').map(prize =>{
+        let [name, count] = prize.split(',').map(item => item.trim());
+        return{ name, count: parseInt(count, 10) };}).filter(prize => prize.name !== '' && !isNaN(prize.count) && prize.count > 0);
+      
+        if(participantsGlobal.length === 0 || prizes.length === 0){
+          resultDisplay.textContent = "請輸入參與者和獎品列表。";
+          return;
+        }
+        const currentPrize = prizes[currentPrizeIndex];
+        const prizeName = currentPrize.name;
+        const prizeCount = currentPrize.count;
+      
+        if(participantsGlobal.length < prizeCount){
+          resultDisplay.textContent = `参與者不足以抽出 ${prizeCount} 個 "${prizeName}"。`;
+          return;
+        }
+      
+        let winners = [];
+
+        for(let i = 0; i < prizeCount; i++){
+          const totalRate = participantsGlobal.reduce((acc, participant) => acc + participant.rate, 0);
+        
+          let randomNumber = Math.random() * totalRate;
+          let accumulatedRate = 0;
+          let selectedParticipant = null;
+        
+          for(let participant of participantsGlobal){
+            accumulatedRate += participant.rate;
+            if(randomNumber <= accumulatedRate){
+            selectedParticipant = participant;
+            break;
+            }
+          }      
+          participantsGlobal = participantsGlobal.filter(participant => participant.name !== selectedParticipant.name);
+          winners.push(`${selectedParticipant.name} (${selectedParticipant.rate} 月)`);
+        }
+      
+        drawResults.push({ prize: prizeName, winners });
+      
+        currentPrizeIndex++; 
+        if(currentPrizeIndex < prizes.length){
+          drawPrize();
+        }else{
+          let finalResult = '';
+            drawResults.forEach(result => {
+              finalResult += `<p><strong>${result.prize} ： <br>${result.winners.join('<br>')}</p>`;
+            });
+            resultDisplay.innerHTML = finalResult;
+            unlockButtons();
+          }
+        
+      }
+      drawButton.addEventListener('click', drawPrize);
+      clearButton.addEventListener('click', () => {
+        drawResults = [];
+        currentPrizeIndex = 0;
+        participantsGlobal = [];
+        resultDisplay.innerHTML = '';
+        unlockButtons();
+      });
+    </script>
+</body>
+</html>
