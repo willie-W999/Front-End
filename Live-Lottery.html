@@ -81,6 +81,9 @@
   .custom-file-upload:hover {
     background-color: #0056b3;
   }
+  textarea::placeholder {
+    white-space: pre-line;
+  }
 </style>
 <body>
     <h1>抽獎</h1>
@@ -96,7 +99,8 @@
         </div>
         <div class="prize-section">
             <label for="prizeDetails">獎項內容：</label>
-            <textarea id="prizeDetails" name="prizeDetails" rows="5" placeholder="項目, 數量"></textarea>
+            <textarea id="prizeDetails" name="prizeDetails" rows="5" placeholder="(正取)項目, 數量 
+            (備取)項目, 數量"></textarea>
         </div>
         <div class="result-section">
             <h2>中獎結果：</h2>
